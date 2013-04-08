@@ -34,7 +34,7 @@ module CapistranoResque
 
         def start_command(queue, pid)
           "cd #{current_path}; #{try_sudo :as => fetch(:resque_runner,user)} RAILS_ENV=#{rails_env} QUEUE=\"#{queue}\" \
-           PIDFILE=#{pid} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} \
+           PIDFILE=#{pid} #{fetch(:workers_env,{})[queue]} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} \
            bundle exec rake resque:work"
         end
 
