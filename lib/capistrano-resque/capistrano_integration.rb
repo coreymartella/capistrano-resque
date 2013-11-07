@@ -35,14 +35,14 @@ module CapistranoResque
         def start_command(queue, pid)
           "cd #{current_path}; #{try_sudo :as => fetch(:resque_runner,user)} RAILS_ENV=#{rails_env} QUEUE=\"#{queue}\" \
            PIDFILE=#{pid} #{fetch(:workers_env,{})[queue]} BACKGROUND=yes VERBOSE=1 INTERVAL=#{interval} \
-           bundle exec rake resque:work"
+           bundle exec rake resque:#{fetch(:no_fork_workers,{})[queue] ? :work_dont_fork : :work}"
         end
 
         def stop_command
           "if [ -e #{current_path}/tmp/pids/resque_work_1.pid ]; then \
            for f in `ls #{current_path}/tmp/pids/resque_work*.pid`; \
-             do #{try_sudo} kill -s #{resque_kill_signal} `cat $f` \
-             && #{try_sudo} rm -f $f ;done \
+             do ps -ef | grep `cat $f` | grep -v grep && #{try_sudo} kill -s #{resque_kill_signal} `cat $f`; \
+             #{try_sudo} rm $f ;done \
            ;fi"
         end
 
@@ -88,7 +88,7 @@ module CapistranoResque
           # USR2 - Don't start to process any new jobs (pause)
           # CONT - Start to process new jobs again after a USR2 (resume)
           desc "Quit running Resque workers"
-          task :stop, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue do
+          task :stop, :roles => lambda { workers_roles() }, :on_no_matching_servers => :continue, :on_error => :continue do
             run(stop_command)
           end
 
